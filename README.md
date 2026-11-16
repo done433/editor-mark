@@ -112,3 +112,7 @@ awk 'BEGIN{for(i=1;i<=1000000;i++){m=i%50; if(m==0)printf "# Heading %d\n",i; el
 wc -l big.txt
 du -h big.txt
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
