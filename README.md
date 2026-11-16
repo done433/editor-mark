@@ -1,3 +1,4 @@
+![icon](editor.png)
 # Markdown Editor
 
 עורך טקסט מינימלי ב-Tkinter עם פאנל outline לכותרות markdown, מיזוג סקציות בשמירה, וסנכרון git מובנה.
