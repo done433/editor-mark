@@ -12,23 +12,25 @@
 
 ## Requirements
 
-- Python 3 עם tkinter
-- git (לפיצ'ר הסנכרון)
+- Python 3 עם tkinter — לעורך עצמו
+- git — רק לפיצ'ר הסנכרון (Pull+Push). העורך עובד בלעדיו.
 
 tkinter לא תמיד מגיע עם python. התקנה לפי הפצה:
 
 ```bash
-# Fedora / RHEL
-sudo dnf install python3-tkinter
-# Debian / Ubuntu
-sudo apt install python3-tk
-# Arch
-sudo pacman -S tk
-# openSUSE
-sudo zypper install python3-tk
+# tkinter
+sudo dnf install python3-tkinter     # Fedora / RHEL
+sudo apt install python3-tk          # Debian / Ubuntu
+sudo pacman -S tk                    # Arch
+sudo zypper install python3-tk       # openSUSE
+
+# git
+sudo dnf install git                 # Fedora / RHEL
+sudo apt install git                 # Debian / Ubuntu
+sudo pacman -S git                   # Arch
 ```
 
-כל שאר התלויות (subprocess, threading, json, urllib) הן חלק מהספרייה הסטנדרטית ולא דורשות התקנה.
+כל שאר התלויות (subprocess, threading, json, urllib) הן חלק מהספרייה הסטנדרטית.
 
 ## Usage
 
@@ -52,12 +54,7 @@ python editor.py
 
 ## Security note
 
-הקובץ ~/.editor_git.json שומר את ה-token בטקסט גלוי. הוא מוגבל להרשאות 600 (קריאה למשתמש בלבד), אבל לאבטחה טובה יותר עדיף להסתמך על git credential helper במקום. אל תעלה את הקובץ הזה ל-git.
-
-
-
-
-
+הקובץ ~/.editor_git.json שומר את ה-token בטקסט גלוי. הוא מוגבל להרשאות 600 (קריאה למשתמש בלבד), אבל לאבטחה טובה יותר עדיף להסתמך על git credential helper. אל תעלה אותו ל-git:
 
 ```bash
 cat > .gitignore << 'EOF'
@@ -67,18 +64,51 @@ __pycache__/
 EOF
 ```
 
+## Development
 
-## Requirements
+פקודות לפרופיילינג, בנייה ובדיקות עומס.
 
-- Python 3 עם tkinter — לעורך עצמו
-- git — רק לפיצ'ר הסנכרון (Pull+Push). העורך עובד בלעדיו.
+### memory profile
 
+מדידת RSS ו-CPU לאורך ריצה, עם גרף:
 
-# Fedora / RHEL
-sudo dnf install git
-# Debian / Ubuntu
-sudo apt install git
-# Arch
-sudo pacman -S git
+```bash
+pip install matplotlib psrecord
+psrecord "python3 ./editor.py" --interval 1 --log mem.txt --plot plot.png
+```
 
+חלופה בלי תלויות, קריאה ישירה מ-/proc (מומלץ, אמין יותר):
 
+```bash
+pid=$(pgrep -f "python.*editor.py" | head -1)
+while kill -0 "$pid" 2>/dev/null; do
+    ts=$(date +%T)
+    read cpu mem <<<"$(ps -p "$pid" -o %cpu=,%mem=)"
+    rss=$(awk '/VmRSS/{print $2/1024" MB"}' /proc/$pid/status)
+    printf "%s  cpu=%s%%  mem=%s%%  rss=%s\n" "$ts" "$cpu" "$mem" "$rss"
+    sleep 1
+done
+```
+
+### build binary
+
+בניית בינארי עצמאי:
+
+```bash
+sudo dnf install binutils
+pip install pyinstaller
+pyinstaller --onefile editor.py
+ldd dist/editor
+```
+
+הערה: --onefile לא יוצר בינארי סטטי. python והספריות נארזים ב-archive שנפרש ל-/tmp בזמן ריצה, ו-ldd עדיין יראה תלות ב-libc של המערכת. בתוך toolbox/distrobox הרץ את הבנייה ואת ldd באותו container, אחרת הבינארי ייקשר ל-libs של סביבה אחרת.
+
+### stress test
+
+יצירת קובץ ענק עם כותרות ותתי-כותרות לבדיקת פאנל ה-outline תחת עומס:
+
+```bash
+awk 'BEGIN{for(i=1;i<=1000000;i++){m=i%50; if(m==0)printf "# Heading %d\n",i; else if(m==25)printf "## Sub %d\n",i; else printf "line %d lorem ipsum dolor sit amet consectetur adipiscing elit %d\n",i,i*7}}' > big.txt
+wc -l big.txt
+du -h big.txt
+```
